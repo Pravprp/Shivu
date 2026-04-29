@@ -1,5 +1,6 @@
 # main.py
 import os
+import sys
 import threading
 from flask import Flask
 from telegram import Update
@@ -9,13 +10,20 @@ from groq import Groq
 # Import data
 from train import PUNCHLINES
 from girls import ALLOWED_GIRLS
+from problems import REPORT_PROBLEMS, PROBLEM_MESSAGES  # <-- New Import
 
 # Setup environment variables
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
+# --- TOKEN CHECK ---
+# If tokens are missing, log the error to Render and stop the bot.
+if not TELEGRAM_TOKEN or not GROQ_API_KEY:
+    if REPORT_PROBLEMS:
+        print(PROBLEM_MESSAGES["missing_tokens"])
+    sys.exit(1)
+
 # The specific group ID where Shivu is allowed to talk
-# (Stored as string to safely handle Telegram's negative prefixes if they occur)
 TARGET_GROUP_ID = "1003532931883"
 
 # Initialize Groq client
@@ -34,7 +42,6 @@ def run_web_server():
 # -------------------------------------------------
 
 def ask_shivu(user_message, callable_names):
-    # Combine training punchlines into a single string for the prompt
     punchlines_str = "\n".join(PUNCHLINES)
     names_str = ", ".join(callable_names)
     
@@ -65,12 +72,14 @@ def ask_shivu(user_message, callable_names):
                 {"role": "system", "content": system_instruction},
                 {"role": "user", "content": user_message}
             ],
-            model="openai/gpt-oss-120b", # Fast and reliable Groq model
+            model="openai/gpt-oss-120b", 
         )
         return chat_completion.choices[0].message.content
 
     except Exception as e:
-        print(f"Groq Error: {e}")
+        if REPORT_PROBLEMS:
+            print(PROBLEM_MESSAGES["api_error_log"].format(error=str(e)))
+            return PROBLEM_MESSAGES["api_error_reply"]
         return None
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -83,14 +92,22 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_message = update.message.text
     
     # 1. Group Check
-    # Telegram supergroups often have a '-100' prefix. We strip prefixes to ensure a match.
     clean_chat_id = chat_id.replace("-100", "").replace("-", "")
     if clean_chat_id != TARGET_GROUP_ID:
-        return # Ignore messages outside the target group
+        if REPORT_PROBLEMS:
+            print(PROBLEM_MESSAGES["wrong_group_log"].format(chat_id=chat_id))
+            try:
+                await update.message.reply_text(PROBLEM_MESSAGES["wrong_group_reply"])
+            except Exception:
+                pass # Ignores if bot lacks permission to send messages in the wrong group
+        return 
 
     # 2. Girl ID Check
     if user_id not in ALLOWED_GIRLS:
-        return # Ignore messages from anyone not in girls.py
+        if REPORT_PROBLEMS:
+            print(PROBLEM_MESSAGES["wrong_user_log"].format(user_id=user_id))
+            await update.message.reply_text(PROBLEM_MESSAGES["wrong_user_reply"])
+        return 
 
     # 3. Generate response and send
     callable_names = ALLOWED_GIRLS[user_id]
