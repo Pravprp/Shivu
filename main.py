@@ -10,21 +10,20 @@ from groq import Groq
 # Import data
 from train import PUNCHLINES
 from girls import ALLOWED_GIRLS
-from problems import REPORT_PROBLEMS, PROBLEM_MESSAGES  # <-- New Import
+from problems import REPORT_PROBLEMS, PROBLEM_MESSAGES 
 
 # Setup environment variables
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 # --- TOKEN CHECK ---
-# If tokens are missing, log the error to Render and stop the bot.
 if not TELEGRAM_TOKEN or not GROQ_API_KEY:
     if REPORT_PROBLEMS:
         print(PROBLEM_MESSAGES["missing_tokens"])
     sys.exit(1)
 
-# The specific group ID where Shivu is allowed to talk
-TARGET_GROUP_ID = "1003532931883"
+# --- THE FIX: EXACT RAW TELEGRAM ID ---
+TARGET_GROUP_ID = "-1003532931883"
 
 # Initialize Groq client
 client = Groq(api_key=GROQ_API_KEY)
@@ -91,22 +90,24 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     user_message = update.message.text
     
-    # 1. Group Check
-    clean_chat_id = chat_id.replace("-100", "").replace("-", "")
-    if clean_chat_id != TARGET_GROUP_ID:
+    # 1. Group Check (Now doing a direct, exact match)
+    if chat_id != TARGET_GROUP_ID:
         if REPORT_PROBLEMS:
             print(PROBLEM_MESSAGES["wrong_group_log"].format(chat_id=chat_id))
             try:
                 await update.message.reply_text(PROBLEM_MESSAGES["wrong_group_reply"])
             except Exception:
-                pass # Ignores if bot lacks permission to send messages in the wrong group
+                pass 
         return 
 
     # 2. Girl ID Check
     if user_id not in ALLOWED_GIRLS:
         if REPORT_PROBLEMS:
             print(PROBLEM_MESSAGES["wrong_user_log"].format(user_id=user_id))
-            await update.message.reply_text(PROBLEM_MESSAGES["wrong_user_reply"])
+            try:
+                await update.message.reply_text(PROBLEM_MESSAGES["wrong_user_reply"])
+            except Exception:
+                pass
         return 
 
     # 3. Generate response and send
