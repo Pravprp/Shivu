@@ -6,5 +6,6 @@ ALLOWED_GIRLS = {
     8211677044: ["Mishti", "Amar Shona", "Amar Rosogolla","Mere Dole Shole", "Aag Lagadi Aag Lagadi Aag Lagadi Aag Lagadi Misty"],
     7556891342: ["Devil", "Jaanu", "Mera Pyaar"],
     8453491983: ["KKK", "Sundari", "Meri Dhadkan"],
-    6109395189: ["Amar Gublu", "Amar Luchi", "Amar Jaan"]
+    6109395189: ["Amar Gublu", "Amar Luchi", "Amar Jaan"],
+    8404203699: ["Chinnu", "Bangara", "Kanda", "Gundamma"]
 }
