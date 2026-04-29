@@ -65,7 +65,7 @@ def ask_shivu(user_message, callable_names):
                 {"role": "system", "content": system_instruction},
                 {"role": "user", "content": user_message}
             ],
-            model="llama3-8b-8192", # Fast and reliable Groq model
+            model="openai/gpt-oss-120b", # Fast and reliable Groq model
         )
         return chat_completion.choices[0].message.content
 
