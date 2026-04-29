@@ -2,6 +2,7 @@
 import os
 import sys
 import threading
+import random  # <-- Added to pick random names
 from flask import Flask
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, ContextTypes, filters
@@ -22,7 +23,7 @@ if not TELEGRAM_TOKEN or not GROQ_API_KEY:
         print(PROBLEM_MESSAGES["missing_tokens"])
     sys.exit(1)
 
-# --- THE FIX: EXACT RAW TELEGRAM ID ---
+# --- EXACT RAW TELEGRAM ID ---
 TARGET_GROUP_ID = "-1003532931883"
 
 # Initialize Groq client
@@ -40,9 +41,9 @@ def run_web_server():
     app_web.run(host="0.0.0.0", port=port)
 # -------------------------------------------------
 
-def ask_shivu(user_message, callable_names):
+def ask_shivu(user_message, chosen_name):
+    # Combine training punchlines into a single string for the prompt
     punchlines_str = "\n".join(PUNCHLINES)
-    names_str = ", ".join(callable_names)
     
     system_instruction = f"""
     Your name is Shivu.
@@ -53,7 +54,7 @@ def ask_shivu(user_message, callable_names):
     
     Context:
     * You are talking to a very special girl. 
-    * You MUST refer to her using one of these names: {names_str}.
+    * You MUST refer to her using this specific name in this reply: {chosen_name}.
     
     Training Data (Use these punchlines for inspiration, mix them naturally into your conversation):
     {punchlines_str}
@@ -90,7 +91,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     user_message = update.message.text
     
-    # 1. Group Check (Now doing a direct, exact match)
+    # 1. Group Check 
     if chat_id != TARGET_GROUP_ID:
         if REPORT_PROBLEMS:
             print(PROBLEM_MESSAGES["wrong_group_log"].format(chat_id=chat_id))
@@ -112,7 +113,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # 3. Generate response and send
     callable_names = ALLOWED_GIRLS[user_id]
-    shivu_reply = ask_shivu(user_message, callable_names)
+    
+    # --- Pick a random name for this specific message ---
+    chosen_name = random.choice(callable_names)
+    
+    shivu_reply = ask_shivu(user_message, chosen_name)
     
     if shivu_reply:
         await update.message.reply_text(shivu_reply)
