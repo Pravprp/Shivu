@@ -3,7 +3,7 @@
 # --- TOGGLE ERROR REPORTING ---
 # Set this to True to see errors and send error replies in Telegram.
 # Set this to False to make the bot silently ignore unauthorized users/groups.
-REPORT_PROBLEMS = True
+REPORT_PROBLEMS = false
 
 # --- PROBLEM MESSAGES ---
 PROBLEM_MESSAGES = {
