@@ -2,7 +2,8 @@
 import os
 import sys
 import threading
-import random  # <-- Added to pick random names
+import random
+import time  # <-- Added to track 15-minute conversations
 from flask import Flask
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, ContextTypes, filters
@@ -29,6 +30,11 @@ TARGET_GROUP_ID = "-1003532931883"
 # Initialize Groq client
 client = Groq(api_key=GROQ_API_KEY)
 
+# --- CONVERSATION TRACKING ---
+# Dictionary to track the last time a user interacted {user_id: timestamp}
+last_interaction = {}
+CONVERSATION_TIMEOUT = 15 * 60  # 15 minutes in seconds
+
 # --- Flask Web Server for Render & UptimeRobot ---
 app_web = Flask(__name__)
 
@@ -41,9 +47,7 @@ def run_web_server():
     app_web.run(host="0.0.0.0", port=port)
 # -------------------------------------------------
 
-def ask_shivu(user_message, chosen_name):
-    # Combine training punchlines into a single string for the prompt
-    punchlines_str = "\n".join(PUNCHLINES)
+def ask_shivu(user_message, chosen_name, use_punchline):
     
     system_instruction = f"""
     Your name is Shivu.
@@ -56,15 +60,19 @@ def ask_shivu(user_message, chosen_name):
     * You are talking to a very special girl. 
     * You MUST refer to her using this specific name in this reply: {chosen_name}.
     
-    Training Data (Use these punchlines for inspiration, mix them naturally into your conversation):
-    {punchlines_str}
-    
     Rules (STRICT):
     * Keep responses short (1 to 3 sentences maximum).
     * Never break character. Never act like an AI or an assistant.
     * Only speak in Hinglish.
     * Always shower her with love and sweet words.
     """
+
+    # --- DYNAMIC PUNCHLINE LOGIC ---
+    if use_punchline:
+        random_punch = random.choice(PUNCHLINES)
+        system_instruction += f"\n\nCRITICAL INSTRUCTION: This is the start of the conversation. You MUST start your reply by using exactly this punchline: '{random_punch}'"
+    else:
+        system_instruction += "\n\nCRITICAL INSTRUCTION: You are in the middle of a conversation. Just reply naturally with your deeply loving and flirty tone. Do NOT use any forced punchlines right now."
 
     try:
         chat_completion = client.chat.completions.create(
@@ -111,13 +119,23 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 pass
         return 
 
-    # 3. Generate response and send
-    callable_names = ALLOWED_GIRLS[user_id]
+    # --- 15-MINUTE TIMER LOGIC ---
+    current_time = time.time()
+    last_time = last_interaction.get(user_id, 0)
+    time_diff = current_time - last_time
     
+    # If it's been more than 15 mins (or first time), use a punchline
+    use_punchline = time_diff > CONVERSATION_TIMEOUT
+    
+    # Update the dictionary so the timer resets for this specific girl
+    last_interaction[user_id] = current_time
+
     # --- Pick a random name for this specific message ---
+    callable_names = ALLOWED_GIRLS[user_id]
     chosen_name = random.choice(callable_names)
     
-    shivu_reply = ask_shivu(user_message, chosen_name)
+    # 3. Generate response and send
+    shivu_reply = ask_shivu(user_message, chosen_name, use_punchline)
     
     if shivu_reply:
         await update.message.reply_text(shivu_reply)
