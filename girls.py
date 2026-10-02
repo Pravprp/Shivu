@@ -10,4 +10,5 @@ ALLOWED_GIRLS = {
     8547157813: ["Kittu", "Kittu Meri Jaan", "Jaanu", "My Love", "Meri Pyari Gudiya"],
     1704559662: ["Ash", "Darling", "Sweetheart", "My Love", "Sunna Meri Sapnon ki Raani"],
     8089253595: ["Nayra", "Cutie", "Suno Sundari", "My Love"]
+    6047179555: ["My Darling", "Cutie", "Suno Sundari", "My Love", "Sunna Meri Sapnon ki Raani", "Sweetheart"]
 }
