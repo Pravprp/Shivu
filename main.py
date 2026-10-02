@@ -3,7 +3,7 @@ import os
 import sys
 import threading
 import random
-import time  # <-- Added to track 15-minute conversations
+import time
 from flask import Flask
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, ContextTypes, filters
@@ -31,9 +31,11 @@ TARGET_GROUP_ID = "-1003532931883"
 client = Groq(api_key=GROQ_API_KEY)
 
 # --- CONVERSATION TRACKING ---
-# Dictionary to track the last time a user interacted {user_id: timestamp}
 last_interaction = {}
 CONVERSATION_TIMEOUT = 15 * 60  # 15 minutes in seconds
+
+# --- BOT STATE ---
+is_bot_active = False
 
 # --- Flask Web Server for Render & UptimeRobot ---
 app_web = Flask(__name__)
@@ -91,6 +93,8 @@ def ask_shivu(user_message, chosen_name, use_punchline):
         return None
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global is_bot_active
+
     # Ensure there is a message and it contains text
     if not update.message or not update.message.text:
         return
@@ -98,7 +102,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.message.chat_id)
     user_id = update.message.from_user.id
     user_message = update.message.text
-    
+    clean_text = user_message.strip().lower()
+
     # 1. Group Check 
     if chat_id != TARGET_GROUP_ID:
         if REPORT_PROBLEMS:
@@ -108,6 +113,21 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except Exception:
                 pass 
         return 
+
+    # --- START / STOP COMMAND TRIGGERS (ANYONE IN GROUP) ---
+    if clean_text in ["start", "shivu"]:
+        is_bot_active = True
+        await update.message.reply_text("✅ Shivu is started and ready to talk! 💖")
+        return
+
+    if clean_text in ["stop", "shut up"]:
+        is_bot_active = False
+        await update.message.reply_text("🛑 Shivu is stopped and going to sleep! 😴")
+        return
+
+    # If the bot is stopped, ignore all other conversation
+    if not is_bot_active:
+        return
 
     # 2. Girl ID Check
     if user_id not in ALLOWED_GIRLS:
