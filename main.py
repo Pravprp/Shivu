@@ -24,8 +24,8 @@ if not TELEGRAM_TOKEN or not GROQ_API_KEY:
         print(PROBLEM_MESSAGES["missing_tokens"])
     sys.exit(1)
 
-# --- EXACT RAW TELEGRAM ID ---
-TARGET_GROUP_ID = "-1003532931883"
+# --- EXACT RAW TELEGRAM GROUP IDS ---
+TARGET_GROUP_IDS = ["-1003532931883", "-1004433221120"]
 
 # Initialize Groq client
 client = Groq(api_key=GROQ_API_KEY)
@@ -105,7 +105,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     clean_text = user_message.strip().lower()
 
     # 1. Group Check 
-    if chat_id != TARGET_GROUP_ID:
+    if chat_id not in TARGET_GROUP_IDS:
         if REPORT_PROBLEMS:
             print(PROBLEM_MESSAGES["wrong_group_log"].format(chat_id=chat_id))
             try:
@@ -115,14 +115,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return 
 
     # --- START / STOP COMMAND TRIGGERS (ANYONE IN GROUP) ---
-    if clean_text in ["start", "shivu"]:
+    if clean_text in ["shivu"]:
         is_bot_active = True
-        await update.message.reply_text("✅ Shivu is started and ready to talk! 💖")
+        await update.message.reply_text("Meri Pyari Kuchu Puchu. Mai Aapke liye Saath Samundar Paar Karke Aa gaya 💖")
         return
 
     if clean_text in ["stop", "shut up"]:
         is_bot_active = False
-        await update.message.reply_text("🛑 Shivu is stopped and going to sleep! 😴")
+        await update.message.reply_text("Lagta hai Aap Mujhe Pyar nai karte. Fir to mai chala jaata hu Aap ke Dil se 💔")
         return
 
     # If the bot is stopped, ignore all other conversation
